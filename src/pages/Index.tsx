@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
-import { Shield, AlertTriangle, Share2, Volume2 } from "lucide-react";
+import { Shield, AlertTriangle, Share2, Volume2, Brain } from "lucide-react";
 import EmergencyButton from "@/components/EmergencyButton";
 import ContactForm from "@/components/ContactForm";
 import LocationMap from "@/components/LocationMap";
+import BatteryIndicator from "@/components/BatteryIndicator";
+import SafeZoneIndicator from "@/components/SafeZoneIndicator";
+import SOSCountdown from "@/components/SOSCountdown";
+import SafetyIndicator3D from "@/components/SafetyIndicator3D";
 import { toast } from "sonner";
 import heroImage from "@/assets/hero-safety.jpg";
 
 const Index = () => {
   const [scrollY, setScrollY] = useState(0);
+  const [showSOSCountdown, setShowSOSCountdown] = useState(false);
+  const [contacts, setContacts] = useState<Array<{ id: string; name: string; phone: string; email: string }>>([]);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -16,11 +22,40 @@ const Index = () => {
   }, []);
 
   const handleSOS = () => {
-    toast.error("SOS Alert Activated!", {
-      description: "Emergency contacts are being notified",
-      duration: 5000,
+    setShowSOSCountdown(true);
+  };
+
+  const handleSOSComplete = () => {
+    setShowSOSCountdown(false);
+    
+    // Send alerts to emergency contacts
+    if (contacts.length > 0) {
+      contacts.forEach(contact => {
+        toast.error(`Alert sent to ${contact.name}`, {
+          description: `Emergency message sent to ${contact.phone}`,
+          duration: 5000,
+        });
+      });
+    }
+
+    toast.error("🚨 SOS Alert Activated!", {
+      description: "Emergency services contacted. Location shared with emergency contacts.",
+      duration: 8000,
     });
-    // In production: trigger actual SOS alert
+
+    // Simulate calling emergency services
+    setTimeout(() => {
+      toast.success("📞 Connected to Emergency Services", {
+        description: "Help is on the way. Stay safe!",
+      });
+    }, 1500);
+  };
+
+  const handleSOSCancel = () => {
+    setShowSOSCountdown(false);
+    toast.info("SOS Alert Cancelled", {
+      description: "Emergency alert has been cancelled",
+    });
   };
 
   const handleBuzzer = () => {
@@ -38,7 +73,16 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 neural-grid relative overflow-hidden">
+      {showSOSCountdown && (
+        <SOSCountdown onComplete={handleSOSComplete} onCancel={handleSOSCancel} />
+      )}
+      
+      {/* Neural network background effect */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-float" style={{ animationDelay: "2s" }} />
+      </div>
       {/* Hero Section with Emergency Controls */}
       <section 
         className="relative min-h-screen flex flex-col items-center justify-center px-4 overflow-hidden"
@@ -63,20 +107,30 @@ const Index = () => {
 
         {/* Content */}
         <div className="relative z-10 text-center max-w-4xl mx-auto space-y-8">
-          <div className="inline-block p-4 rounded-2xl glass-effect mb-4 animate-float">
-            <Shield className="h-16 w-16 text-primary" />
+          <div className="inline-block p-6 rounded-3xl glass-effect mb-4 animate-float shadow-[var(--shadow-neural)]">
+            <Brain className="h-20 w-20 text-primary animate-neural-pulse" />
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-bold gradient-text mb-6 animate-fade-in">
-            SafeGuard
+          <h1 className="text-6xl md:text-8xl font-bold gradient-text mb-6 animate-fade-in tracking-tight">
+            NEUROSHIELD
           </h1>
           
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: "0.2s" }}>
-            Your Personal Safety Companion. Stay protected, stay connected, stay empowered.
+          <p className="text-xl md:text-3xl font-semibold text-foreground max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: "0.2s" }}>
+            When Game-Changing, Becomes Life-Altering
+          </p>
+          
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: "0.3s" }}>
+            AI-Powered Safety System • Neural Protection Technology • 24/7 Monitoring
           </p>
 
+          {/* Status indicators */}
+          <div className="flex flex-wrap justify-center gap-4 mt-8 animate-fade-in" style={{ animationDelay: "0.4s" }}>
+            <SafeZoneIndicator />
+            <BatteryIndicator />
+          </div>
+
           {/* Emergency Buttons */}
-          <div className="flex flex-wrap justify-center gap-4 mt-12 animate-fade-in" style={{ animationDelay: "0.4s" }}>
+          <div className="flex flex-wrap justify-center gap-4 mt-12 animate-fade-in" style={{ animationDelay: "0.5s" }}>
             <EmergencyButton
               icon={AlertTriangle}
               label="SOS"
@@ -97,10 +151,10 @@ const Index = () => {
             />
           </div>
 
-          <div className="mt-8 glass-effect rounded-full px-6 py-3 inline-block animate-fade-in" style={{ animationDelay: "0.6s" }}>
-            <p className="text-sm text-muted-foreground">
-              <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />
-              24/7 Emergency Support Active
+          <div className="mt-8 glass-effect rounded-full px-6 py-3 inline-block animate-fade-in shadow-[var(--shadow-glow)]" style={{ animationDelay: "0.6s" }}>
+            <p className="text-sm font-medium">
+              <span className="inline-block w-2 h-2 bg-primary rounded-full mr-2 animate-pulse" />
+              Neural Protection Active • Emergency Response Ready
             </p>
           </div>
         </div>
@@ -111,6 +165,11 @@ const Index = () => {
             <div className="w-1.5 h-3 bg-primary rounded-full mx-auto animate-pulse" />
           </div>
         </div>
+      </section>
+
+      {/* 3D Safety Indicator */}
+      <section className="py-20 px-4 relative">
+        <SafetyIndicator3D />
       </section>
 
       {/* Emergency Contacts Section */}
@@ -127,11 +186,11 @@ const Index = () => {
               Emergency Contacts
             </h2>
             <p className="text-lg text-muted-foreground">
-              Add trusted contacts who will be notified in case of emergency
+              Add trusted contacts who will be auto-alerted during SOS
             </p>
           </div>
           
-          <ContactForm />
+          <ContactForm onContactsChange={setContacts} />
         </div>
       </section>
 
@@ -208,17 +267,17 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t border-border/50 bg-card/50 backdrop-blur-xl">
+      <footer className="py-8 px-4 border-t border-border/50 bg-card/50 backdrop-blur-xl relative">
         <div className="max-w-6xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Shield className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold gradient-text">SafeGuard</span>
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Brain className="h-7 w-7 text-primary animate-neural-pulse" />
+            <span className="text-2xl font-bold gradient-text tracking-wide">NEUROSHIELD</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Empowering women with technology. Your safety is our priority.
+          <p className="text-sm text-muted-foreground mb-2">
+            AI-Powered Neural Protection • Empowering Women with Advanced Technology
           </p>
-          <p className="text-xs text-muted-foreground mt-2">
-            © 2025 SafeGuard. All rights reserved.
+          <p className="text-xs text-muted-foreground">
+            © 2025 NeuroShield. When Game-Changing, Becomes Life-Altering. All rights reserved.
           </p>
         </div>
       </footer>

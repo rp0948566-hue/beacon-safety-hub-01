@@ -12,7 +12,11 @@ interface Contact {
   email: string;
 }
 
-const ContactForm = () => {
+interface ContactFormProps {
+  onContactsChange?: (contacts: Contact[]) => void;
+}
+
+const ContactForm = ({ onContactsChange }: ContactFormProps) => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [formData, setFormData] = useState({
     name: "",
@@ -31,13 +35,17 @@ const ContactForm = () => {
       ...formData
     };
 
-    setContacts([...contacts, newContact]);
+    const updatedContacts = [...contacts, newContact];
+    setContacts(updatedContacts);
+    onContactsChange?.(updatedContacts);
     setFormData({ name: "", phone: "", email: "" });
     toast.success("Emergency contact added!");
   };
 
   const handleDelete = (id: string) => {
-    setContacts(contacts.filter(c => c.id !== id));
+    const updatedContacts = contacts.filter(c => c.id !== id);
+    setContacts(updatedContacts);
+    onContactsChange?.(updatedContacts);
     toast.success("Contact removed");
   };
 
