@@ -7,6 +7,7 @@ import BatteryIndicator from "@/components/BatteryIndicator";
 import SafeZoneIndicator from "@/components/SafeZoneIndicator";
 import SOSCountdown from "@/components/SOSCountdown";
 import SafetyIndicator3D from "@/components/SafetyIndicator3D";
+import PanicMode from "@/components/PanicMode";
 import { toast } from "sonner";
 import heroImage from "@/assets/hero-safety.jpg";
 
@@ -14,6 +15,7 @@ const Index = () => {
   const [scrollY, setScrollY] = useState(0);
   const [showSOSCountdown, setShowSOSCountdown] = useState(false);
   const [contacts, setContacts] = useState<Array<{ id: string; name: string; phone: string; email: string }>>([]);
+  const [panicLocation, setPanicLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -70,6 +72,11 @@ const Index = () => {
       description: "Location sent to emergency contacts",
     });
     // In production: share location with contacts
+  };
+
+  const handlePanicLocationUpdate = (lat: number, lng: number) => {
+    setPanicLocation({ lat, lng });
+    console.log(`Panic mode location updated: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
   };
 
   return (
@@ -281,6 +288,12 @@ const Index = () => {
           </p>
         </div>
       </footer>
+
+      {/* Discreet Panic Mode Button */}
+      <PanicMode 
+        onLocationUpdate={handlePanicLocationUpdate}
+        emergencyContacts={contacts}
+      />
     </div>
   );
 };
