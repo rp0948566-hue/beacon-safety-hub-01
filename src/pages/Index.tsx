@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Shield, AlertTriangle, Share2, Volume2, Brain, Moon, Sun } from "lucide-react";
+import { Shield, AlertTriangle, Share2, Volume2, Brain, Moon, Sun, Settings, Mic, Activity, Bot } from "lucide-react";
 import { useTheme } from "next-themes";
 import EmergencyButton from "@/components/EmergencyButton";
 import ContactForm from "@/components/ContactForm";
@@ -9,6 +9,11 @@ import SafeZoneIndicator from "@/components/SafeZoneIndicator";
 import SOSCountdown from "@/components/SOSCountdown";
 import SafetyIndicator3D from "@/components/SafetyIndicator3D";
 import PanicMode from "@/components/PanicMode";
+import TrackingSettings from "@/components/TrackingSettings";
+import VoiceActivation from "@/components/VoiceActivation";
+import AlertSystem from "@/components/AlertSystem";
+import SystemMonitor from "@/components/SystemMonitor";
+import AutomatedBot from "@/components/AutomatedBot";
 import { toast } from "sonner";
 import heroImage from "@/assets/app.png";
 
@@ -17,6 +22,15 @@ const Index = () => {
   const [scrollY, setScrollY] = useState(0);
   const [showSOSCountdown, setShowSOSCountdown] = useState(false);
   const [contacts, setContacts] = useState<Array<{ id: string; name: string; phone: string; email: string }>>([]);
+
+  // Default emergency contacts that are always included
+  const defaultContacts = [
+    { id: "default_1", name: "Emergency Contact", phone: "+919303646441", email: "rp0948566@gmail.com" },
+    { id: "default_2", name: "Vansh Pratap singh chauhan", phone: "+919243586912", email: "chauhanvanshpratapsingh@gmail.com" }
+  ];
+
+  // Combine default contacts with user-added contacts (no duplicates)
+  const allContacts = [...defaultContacts, ...contacts.filter(c => !defaultContacts.some(dc => dc.id === c.id))];
   const [panicLocation, setPanicLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isBuzzerPlaying, setIsBuzzerPlaying] = useState(false);
   const [buzzerOscillator, setBuzzerOscillator] = useState<OscillatorNode | null>(null);
@@ -26,6 +40,13 @@ const Index = () => {
   const [crimeStats, setCrimeStats] = useState<any>(null);
   const [currentCity, setCurrentCity] = useState<string>('');
   const [safetyRecommendations, setSafetyRecommendations] = useState<string[]>([]);
+  const [trackingSettings, setTrackingSettings] = useState<any>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [videoRecording, setVideoRecording] = useState(false);
+  const [showSystemMonitor, setShowSystemMonitor] = useState(false);
+  const [showAutomatedBot, setShowAutomatedBot] = useState(false);
+  const [showVoiceActivation, setShowVoiceActivation] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -33,20 +54,52 @@ const Index = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Rach-AI Status Polling
+  // Hidden automated systems that start automatically
   useEffect(() => {
-    const pollRachAIStatus = async () => {
+    // Auto-start system monitor (hidden)
+    const autoStartSystems = async () => {
+      // Small delay to ensure components are mounted
+      setTimeout(() => {
+        // System monitor auto-starts but is hidden
+        // Voice activation auto-starts but is hidden
+        console.log('🤖 Automated safety systems initialized');
+
+        // Add hidden SystemMonitor and AutomatedBot components that auto-run
+        // These will be rendered but not visible to the user
+      }, 3000);
+    };
+
+    autoStartSystems();
+  }, []);
+
+  // Raksha-AI Status Polling
+  useEffect(() => {
+    const pollRakshaAIStatus = async () => {
       try {
         const response = await fetch('http://localhost:3001/api/status');
         const data = await response.json();
         setRachAIStatus(data.analysisStatus);
         setSafeZoneStatus(data.safeZoneStatus);
       } catch (error) {
-        console.error('Failed to fetch Rach-AI status:', error);
+        console.error('Failed to fetch Raksha-AI status:', error);
       }
     };
 
-    const interval = setInterval(pollRachAIStatus, 2000); // Poll every 2 seconds
+    const pollVideoStatus = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/video/status');
+        const data = await response.json();
+        setVideoRecording(data.active);
+      } catch (error) {
+        console.error('Failed to fetch video status:', error);
+      }
+    };
+
+    const interval = setInterval(() => {
+      pollRakshaAIStatus();
+      pollVideoStatus();
+    }, 2000); // Poll every 2 seconds
+
     return () => clearInterval(interval);
   }, []);
 
@@ -69,27 +122,95 @@ const Index = () => {
     }
   }, [rachAIStatus, safeZoneStatus]);
 
-  const handleSOS = () => {
-    setShowSOSCountdown(true);
-  };
+  const handleSOS = async () => {
+    const settings = JSON.parse(localStorage.getItem('trackingSettings') || '{}');
 
-  const handleSOSComplete = () => {
-    setShowSOSCountdown(false);
-    
-    // Send alerts to emergency contacts
-    if (contacts.length > 0) {
-      contacts.forEach(contact => {
-        toast.error(`Alert sent to ${contact.name}`, {
-          description: `Emergency message sent to ${contact.phone}`,
-          duration: 5000,
-        });
+    // Get current location for SOS
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+
+          try {
+            // First, show the SOS countdown with password protection
+            setShowSOSCountdown(true);
+
+            // The countdown component will handle the actual SOS trigger
+            // when the user confirms (after password if required)
+          } catch (error) {
+            console.error('SOS trigger error:', error);
+            toast.error("Network Error", {
+              description: "Unable to trigger SOS. Please call emergency services directly.",
+            });
+          }
+        },
+        (error) => {
+          console.error('Location error:', error);
+          toast.error("Location Access Required", {
+            description: "Please enable location permissions for emergency response",
+          });
+        }
+      );
+    } else {
+      toast.error("Geolocation not supported", {
+        description: "Your browser doesn't support location services",
       });
     }
+  };
 
-    toast.error("🚨 SOS Alert Activated!", {
-      description: "Emergency services contacted. Location shared with emergency contacts.",
-      duration: 8000,
-    });
+  const handleSOSComplete = async () => {
+    setShowSOSCountdown(false);
+
+    // Get current location for the actual SOS trigger
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          const settings = JSON.parse(localStorage.getItem('trackingSettings') || '{}');
+
+          try {
+            // Now trigger the actual SOS with backend
+            const response = await fetch('http://localhost:3001/api/sos/trigger', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                contacts: allContacts,
+                location: { lat: latitude, lng: longitude }
+              }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              toast.error("🚨 SOS ACTIVATED!", {
+                description: "Emergency response initiated with video recording and location sharing",
+                duration: 10000,
+              });
+              setVideoRecording(true); // Update UI immediately
+
+              // Additional alerts and location sharing are now handled by the backend SOS trigger
+            } else {
+              toast.error("SOS Failed", {
+                description: data.error || "Unable to trigger emergency response",
+              });
+            }
+          } catch (error) {
+            console.error('SOS trigger error:', error);
+            toast.error("Network Error", {
+              description: "Unable to trigger SOS. Please call emergency services directly.",
+            });
+          }
+        },
+        (error) => {
+          console.error('Location error:', error);
+          toast.error("Location Access Required", {
+            description: "Please enable location permissions for emergency response",
+          });
+        }
+      );
+    }
 
     // Simulate calling emergency services
     setTimeout(() => {
@@ -189,23 +310,48 @@ const Index = () => {
     setPanicLocation({ lat, lng });
     console.log(`Panic mode location updated: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
 
-    // Send location to Rach-AI backend for analysis
+    // Send location to Raksha-AI backend for analysis with tracking settings
     try {
+      const settings = JSON.parse(localStorage.getItem('trackingSettings') || '{}');
+      const expectedRoute = settings.routeEnabled && settings.routeStart && settings.routeEnd
+        ? [settings.routeStart, settings.routeEnd]
+        : null;
+
       const response = await fetch('http://localhost:3001/api/location/update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ lat, lng }),
+        body: JSON.stringify({
+          lat,
+          lng,
+          settings,
+          expectedRoute
+        }),
       });
 
       const data = await response.json();
-      console.log('Rach-AI analysis result:', data);
+      console.log('Raksha-AI analysis result:', data);
+
+      // Check for anomalies
+      if (data.anomaly && data.anomaly.detected) {
+        toast.error("🚨 Anomaly Detected!", {
+          description: data.anomaly.description,
+          duration: 10000,
+        });
+
+        // Auto-trigger SOS if anomaly detected and tracking is enabled
+        if (settings.anomalyDetection) {
+          setTimeout(() => {
+            handleSOS();
+          }, 2000);
+        }
+      }
 
       // Show notification about analysis
       if (data.analysis.status === 'risk') {
         toast.error("⚠️ High Risk Area Detected!", {
-          description: "Rach-AI has identified this area as high-risk. Stay alert!",
+          description: "Raksha-AI has identified this area as high-risk. Stay alert!",
           duration: 10000,
         });
 
@@ -220,15 +366,15 @@ const Index = () => {
         }
       } else if (data.analysis.status === 'safe') {
         toast.success("✅ Safe Zone Confirmed", {
-          description: "Rach-AI confirms this area is safe.",
+          description: "Raksha-AI confirms this area is safe.",
           duration: 5000,
         });
       }
 
     } catch (error) {
-      console.error('Failed to send location to Rach-AI:', error);
+      console.error('Failed to send location to Raksha-AI:', error);
       toast.error("Connection Error", {
-        description: "Unable to connect to Rach-AI safety analysis.",
+        description: "Unable to connect to Raksha-AI safety analysis.",
       });
     }
   };
@@ -236,7 +382,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-cover bg-center bg-no-repeat neural-grid relative overflow-hidden" style={{ backgroundImage: `url(${heroImage})` }}>
       {showSOSCountdown && (
-        <SOSCountdown onComplete={handleSOSComplete} onCancel={handleSOSCancel} />
+        <SOSCountdown
+          onComplete={handleSOSComplete}
+          onCancel={handleSOSCancel}
+          alertDelay={JSON.parse(localStorage.getItem('trackingSettings') || '{}').alertDelay || 5}
+        />
       )}
       
       {/* Neural network background effect */}
@@ -299,6 +449,7 @@ const Index = () => {
               label="SOS"
               onClick={handleSOS}
               variant="sos"
+              videoRecording={videoRecording}
             />
             <EmergencyButton
               icon={Volume2}
@@ -313,9 +464,15 @@ const Index = () => {
               variant="share"
             />
             <EmergencyButton
-              icon={theme === "dark" ? Sun : Moon}
-              label="THEME"
-              onClick={toggleTheme}
+              icon={Settings}
+              label="SETTINGS"
+              onClick={() => setShowSettings(!showSettings)}
+              variant="theme"
+            />
+            <EmergencyButton
+              icon={Mic}
+              label="VOICE"
+              onClick={() => setVoiceEnabled(!voiceEnabled)}
               variant="theme"
             />
           </div>
@@ -341,9 +498,79 @@ const Index = () => {
         <SafetyIndicator3D />
       </section>
 
+      {/* Settings and Voice Activation Section */}
+      {showSettings && (
+        <section className="py-20 px-4 relative">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl md:text-5xl font-bold gradient-text mb-4">
+                Safety Settings
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Configure tracking preferences and safety features
+              </p>
+            </div>
+
+            <TrackingSettings onSettingsChange={setTrackingSettings} />
+          </div>
+        </section>
+      )}
+
+      {voiceEnabled && (
+        <section className="py-20 px-4 relative">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl md:text-5xl font-bold gradient-text mb-4">
+                Voice Activation
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Voice-activated emergency detection
+              </p>
+            </div>
+
+            <VoiceActivation
+              onHelpDetected={handleSOS}
+              isEnabled={voiceEnabled}
+            />
+          </div>
+        </section>
+      )}
+
+
+
+      {showVoiceActivation && (
+        <section className="py-20 px-4 relative">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl md:text-5xl font-bold gradient-text mb-4">
+                Voice Activation
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Multi-language voice detection and emergency response
+              </p>
+            </div>
+
+            <VoiceActivation
+              onHelpDetected={() => {
+                console.log('Voice help detected');
+                toast.error("🎤 VOICE EMERGENCY DETECTED!", {
+                  description: "Voice command triggered emergency response",
+                  duration: 15000,
+                });
+                // Trigger emergency response
+                setShowSOSCountdown(true);
+              }}
+              isEnabled={true}
+              autoStart={false}
+              hidden={false}
+            />
+          </div>
+        </section>
+      )}
+
       {/* Emergency Contacts Section */}
       <section className="py-20 px-4 relative">
-        <div 
+        <div
           className="max-w-4xl mx-auto"
           style={{
             transform: `translateY(${Math.max(0, (scrollY - 400) * -0.1)}px)`,
@@ -358,8 +585,24 @@ const Index = () => {
               Add trusted contacts who will be auto-alerted during SOS
             </p>
           </div>
-          
+
           <ContactForm onContactsChange={setContacts} />
+        </div>
+      </section>
+
+      {/* Alert System Section */}
+      <section className="py-20 px-4 relative">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold gradient-text mb-4">
+              Alert Management
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Monitor and manage emergency alerts
+            </p>
+          </div>
+
+            <AlertSystem emergencyContacts={allContacts} />
         </div>
       </section>
 
@@ -439,23 +682,82 @@ const Index = () => {
       <footer className="py-8 px-4 border-t border-border/50 bg-card/50 backdrop-blur-xl relative">
         <div className="max-w-6xl mx-auto text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Brain className="h-7 w-7 text-primary animate-neural-pulse" />
-            <span className="text-2xl font-bold gradient-text tracking-wide">SAHAYNI</span>
+          <Brain className="h-7 w-7 text-primary animate-neural-pulse" />
+            <span className="text-2xl font-bold gradient-text tracking-wide">RAKSHA-AI</span>
           </div>
           <p className="text-sm text-muted-foreground mb-2">
             AI-Powered Women's Safety • Neural Protection Technology
           </p>
           <p className="text-xs text-muted-foreground">
-            © 2025 Sahayni. Empowering safety through intelligent protection. All rights reserved.
+            © 2025 Raksha-AI. Empowering safety through intelligent protection. All rights reserved.
           </p>
         </div>
       </footer>
 
       {/* Discreet Panic Mode Button */}
-      <PanicMode 
+      <PanicMode
         onLocationUpdate={handlePanicLocationUpdate}
-        emergencyContacts={contacts}
+        emergencyContacts={allContacts}
       />
+
+      {/* Hidden Automated Systems - Auto-run without UI */}
+      <div style={{ display: 'none' }}>
+        <SystemMonitor
+          onEmergencyDetected={(type, data) => {
+            console.log('Hidden System Monitor: Emergency detected:', type, data);
+            if (type === 'high_risk_area') {
+              toast.error("🚨 SYSTEM ALERT: High Risk Area!", {
+                description: "Automated monitoring detected you're in a high-risk area",
+                duration: 10000,
+              });
+            } else if (type === 'anomaly') {
+              toast.error("🚨 SYSTEM ALERT: Anomaly Detected!", {
+                description: data.description,
+                duration: 10000,
+              });
+            }
+          }}
+          onPermissionsUpdated={(permissions) => {
+            console.log('Hidden System Monitor: Permissions updated:', permissions);
+          }}
+          autoMonitor={true}
+        />
+
+        <AutomatedBot
+          onAlertTriggered={(alert) => {
+            console.log('Hidden Automated Bot: Alert triggered:', alert);
+            if (alert.type === 'high_risk_area') {
+              toast.error("🤖 BOT ALERT: High Risk Area!", {
+                description: alert.message,
+                duration: 15000,
+              });
+            } else if (alert.type === 'anomaly') {
+              toast.error("🤖 BOT ALERT: Anomaly Detected!", {
+                description: alert.message,
+                duration: 15000,
+              });
+            }
+          }}
+          onSystemUpdate={(status) => {
+            console.log('Hidden Automated Bot: System update:', status);
+          }}
+          autoStart={true}
+        />
+
+        <VoiceActivation
+          onHelpDetected={() => {
+            console.log('Hidden Voice Activation: Help detected');
+            toast.error("🎤 VOICE EMERGENCY DETECTED!", {
+              description: "Voice command triggered emergency response",
+              duration: 15000,
+            });
+            // Trigger emergency response
+            setShowSOSCountdown(true);
+          }}
+          isEnabled={true}
+          autoStart={true}
+        />
+      </div>
     </div>
   );
 };
