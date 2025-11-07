@@ -8,6 +8,7 @@ import SafeZoneIndicator from "@/components/SafeZoneIndicator";
 import SOSCountdown from "@/components/SOSCountdown";
 import SafetyIndicator3D from "@/components/SafetyIndicator3D";
 import PanicMode from "@/components/PanicMode";
+import RouteTracker from "@/components/RouteTracker";
 import { toast } from "sonner";
 import heroImage from "@/assets/hero-safety.jpg";
 
@@ -201,13 +202,35 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Location Map Section */}
+      {/* Route Tracking Section */}
       <section className="py-20 px-4 relative">
         <div 
           className="max-w-4xl mx-auto"
           style={{
             transform: `translateY(${Math.max(0, (scrollY - 800) * -0.1)}px)`,
             opacity: Math.min(1, (scrollY - 700) / 200),
+          }}
+        >
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold gradient-text mb-4">
+              AI-Powered Route Safety
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Intelligent monitoring detects deviations and auto-alerts your contacts
+            </p>
+          </div>
+          
+          <RouteTracker emergencyContacts={contacts} />
+        </div>
+      </section>
+
+      {/* Location Map Section */}
+      <section className="py-20 px-4 relative">
+        <div 
+          className="max-w-4xl mx-auto"
+          style={{
+            transform: `translateY(${Math.max(0, (scrollY - 1000) * -0.1)}px)`,
+            opacity: Math.min(1, (scrollY - 900) / 200),
           }}
         >
           <div className="text-center mb-12">
