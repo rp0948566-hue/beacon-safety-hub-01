@@ -14,7 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      panic_recordings: {
+        Row: {
+          duration_seconds: number | null
+          file_path: string
+          file_size: number | null
+          id: string
+          recording_type: string
+          session_id: string
+          uploaded_at: string
+          user_id: string | null
+        }
+        Insert: {
+          duration_seconds?: number | null
+          file_path: string
+          file_size?: number | null
+          id?: string
+          recording_type: string
+          session_id: string
+          uploaded_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          duration_seconds?: number | null
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          recording_type?: string
+          session_id?: string
+          uploaded_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panic_recordings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "panic_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      panic_sessions: {
+        Row: {
+          created_at: string
+          emergency_contacts: Json | null
+          ended_at: string | null
+          id: string
+          location_history: Json | null
+          recording_mode: string
+          started_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          emergency_contacts?: Json | null
+          ended_at?: string | null
+          id?: string
+          location_history?: Json | null
+          recording_mode: string
+          started_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          emergency_contacts?: Json | null
+          ended_at?: string | null
+          id?: string
+          location_history?: Json | null
+          recording_mode?: string
+          started_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

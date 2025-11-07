@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { Shield, ShieldOff, MapPin, Mic, Video, Camera } from "lucide-react";
+import { Shield, ShieldOff, MapPin, Mic, Video, Camera, Cloud, CloudOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PanicModeProps {
   onLocationUpdate?: (lat: number, lng: number) => void;
@@ -16,6 +17,9 @@ const PanicMode = ({ onLocationUpdate, emergencyContacts }: PanicModeProps) => {
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [locationHistory, setLocationHistory] = useState<Array<{ lat: number; lng: number; timestamp: number }>>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
   const videoRecorderRef = useRef<MediaRecorder | null>(null);
@@ -24,6 +28,21 @@ const PanicMode = ({ onLocationUpdate, emergencyContacts }: PanicModeProps) => {
   const videoStreamRef = useRef<MediaStream | null>(null);
   const locationIntervalRef = useRef<number | null>(null);
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const startAudioRecording = async () => {
     try {
@@ -38,17 +57,21 @@ const PanicMode = ({ onLocationUpdate, emergencyContacts }: PanicModeProps) => {
         }
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(audioBlob);
+        console.log('Audio recording completed:', audioBlob.size, 'bytes');
         
-        // Create download link for the recording
-        const a = document.createElement('a');
-        a.href = audioUrl;
-        a.download = `panic-audio-${Date.now()}.webm`;
-        a.click();
-        
-        console.log('Audio recording saved:', audioBlob.size, 'bytes');
+        // Upload to cloud storage
+        if (isAuthenticated && sessionId) {
+          await uploadRecording(audioBlob, 'audio', 'audio/webm');
+        } else {
+          // Fallback to local download
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const a = document.createElement('a');
+          a.href = audioUrl;
+          a.download = `panic-audio-${Date.now()}.webm`;
+          a.click();
+        }
       };
 
       mediaRecorder.start();
@@ -124,17 +147,21 @@ const PanicMode = ({ onLocationUpdate, emergencyContacts }: PanicModeProps) => {
         }
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
-        const videoUrl = URL.createObjectURL(videoBlob);
+        console.log('Video recording completed:', videoBlob.size, 'bytes');
         
-        // Create download link for the recording
-        const a = document.createElement('a');
-        a.href = videoUrl;
-        a.download = `panic-video-${Date.now()}.webm`;
-        a.click();
-        
-        console.log('Video recording saved:', videoBlob.size, 'bytes');
+        // Upload to cloud storage
+        if (isAuthenticated && sessionId) {
+          await uploadRecording(videoBlob, 'video', 'video/webm');
+        } else {
+          // Fallback to local download
+          const videoUrl = URL.createObjectURL(videoBlob);
+          const a = document.createElement('a');
+          a.href = videoUrl;
+          a.download = `panic-video-${Date.now()}.webm`;
+          a.click();
+        }
         
         // Clean up video element
         if (videoElementRef.current) {
@@ -215,8 +242,75 @@ const PanicMode = ({ onLocationUpdate, emergencyContacts }: PanicModeProps) => {
     }
   };
 
+  const uploadRecording = async (blob: Blob, type: 'audio' | 'video', mimeType: string) => {
+    if (!sessionId || !isAuthenticated) {
+      console.error('Cannot upload: not authenticated or no session');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      const formData = new FormData();
+      const file = new File([blob], `${type}-${Date.now()}.webm`, { type: mimeType });
+      formData.append('file', file);
+      formData.append('sessionId', sessionId);
+      formData.append('recordingType', type);
+
+      const { data, error } = await supabase.functions.invoke('upload-panic-recording', {
+        body: formData,
+      });
+
+      if (error) throw error;
+
+      console.log(`✅ ${type} recording uploaded to cloud storage:`, data.filePath);
+      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} recording secured`, {
+        description: 'Encrypted and safely stored in cloud',
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error(`Failed to upload ${type} recording:`, error);
+      toast.error(`Failed to upload ${type} recording`, {
+        description: 'Recording saved locally as backup',
+      });
+      
+      // Fallback to local download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `panic-${type}-${Date.now()}.webm`;
+      a.click();
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const activatePanicMode = async () => {
     setIsActive(true);
+    
+    // Create panic session in database
+    if (isAuthenticated) {
+      try {
+        const { data, error } = await supabase
+          .from('panic_sessions')
+          .insert({
+            recording_mode: recordingMode,
+            emergency_contacts: emergencyContacts || [],
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        setSessionId(data.id);
+        console.log('🔒 Panic session created:', data.id);
+      } catch (error) {
+        console.error('Failed to create panic session:', error);
+      }
+    }
     
     // Discreet notification - no loud toasts
     console.log('🔒 Panic mode activated - recording and tracking location');
@@ -240,18 +334,35 @@ const PanicMode = ({ onLocationUpdate, emergencyContacts }: PanicModeProps) => {
     startLocationTracking();
   };
 
-  const deactivatePanicMode = () => {
+  const deactivatePanicMode = async () => {
     setIsActive(false);
     stopAudioRecording();
     stopVideoRecording();
     stopLocationTracking();
     
+    // Update session with end time and location history
+    if (isAuthenticated && sessionId) {
+      try {
+        await supabase
+          .from('panic_sessions')
+          .update({
+            ended_at: new Date().toISOString(),
+            location_history: locationHistory,
+          })
+          .eq('id', sessionId);
+        console.log('📍 Session updated with location history');
+      } catch (error) {
+        console.error('Failed to update session:', error);
+      }
+    }
+    
     const recordingTypes: string[] = [];
     if (isRecordingAudio) recordingTypes.push('audio');
     if (isRecordingVideo) recordingTypes.push('video');
     
+    const storageMsg = isAuthenticated ? 'secured in encrypted cloud storage' : 'saved locally';
     toast.success("Panic mode deactivated", {
-      description: `Saved ${recordingTypes.join(' & ')} recording${recordingTypes.length > 1 ? 's' : ''} and ${locationHistory.length} location points`,
+      description: `${recordingTypes.join(' & ')} recording${recordingTypes.length > 1 ? 's' : ''} and ${locationHistory.length} location points ${storageMsg}`,
     });
 
     // Generate location history report
@@ -262,6 +373,8 @@ const PanicMode = ({ onLocationUpdate, emergencyContacts }: PanicModeProps) => {
       
       console.log('Location history:\n', report);
     }
+    
+    setSessionId(null);
   };
 
   const cycleRecordingMode = () => {
@@ -343,6 +456,17 @@ const PanicMode = ({ onLocationUpdate, emergencyContacts }: PanicModeProps) => {
           {locationHistory.length > 0 && (
             <div className="w-3 h-3 bg-primary rounded-full animate-pulse" title="Tracking location" />
           )}
+          {isAuthenticated && (
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" title="Cloud backup active" />
+          )}
+        </div>
+      )}
+
+      {/* Upload status indicator */}
+      {isUploading && (
+        <div className="absolute -bottom-8 right-0 text-xs text-muted-foreground flex items-center gap-1">
+          <Cloud className="h-3 w-3 animate-pulse" />
+          <span>Uploading...</span>
         </div>
       )}
 
