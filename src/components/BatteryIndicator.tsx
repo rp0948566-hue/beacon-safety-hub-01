@@ -50,20 +50,20 @@ const BatteryIndicator = () => {
   };
 
   const getBatteryColor = () => {
-    if (isCharging) return "text-accent dark:text-green-400";
-    if (batteryLevel < 20) return "text-destructive dark:text-red-400";
-    if (batteryLevel < 50) return "text-orange-500 dark:text-orange-400";
-    return "text-primary dark:text-blue-400";
+    if (isCharging) return "text-accent";
+    if (batteryLevel < 20) return "text-destructive";
+    if (batteryLevel < 50) return "text-orange-500";
+    return "text-primary";
   };
 
   const Icon = getBatteryIcon();
 
   return (
-    <div className="glass-effect rounded-full px-4 py-2 flex items-center gap-2 animate-fade-in dark:bg-white/5 dark:border-white/20">
+    <div className="glass-effect rounded-full px-4 py-2 flex items-center gap-2 animate-fade-in">
       <Icon className={`h-5 w-5 ${getBatteryColor()}`} />
-      <span className="text-sm font-medium text-foreground dark:text-white">
+      <span className="text-sm font-medium">
         {batteryLevel}%
-        {isCharging && <span className="text-yellow-500 dark:text-yellow-400"> ⚡</span>}
+        {isCharging && " ⚡"}
       </span>
     </div>
   );

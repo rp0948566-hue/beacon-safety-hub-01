@@ -140,9 +140,9 @@ const LocationMap = () => {
         </Button>
       </div>
 
-      <div className="glass-effect rounded-xl p-4 text-center dark:bg-white/5 dark:border-white/20">
-        <p className="text-sm text-muted-foreground dark:text-gray-300 flex items-center justify-center gap-2">
-          <MapPin className="h-4 w-4 text-primary dark:text-blue-400" />
+      <div className="glass-effect rounded-xl p-4 text-center">
+        <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+          <MapPin className="h-4 w-4" />
           Current: {position.lat.toFixed(4)}, {position.lng.toFixed(4)}
         </p>
       </div>
